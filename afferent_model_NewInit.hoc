@@ -1,0 +1,156 @@
+proc celldef() {
+  topol()
+  subsets()
+  geom()
+  biophys()
+  geom_nseg()
+}
+
+create mid, siz, trsd, cndt
+
+proc topol() { local i
+  connect siz(0), mid(1)
+  connect trsd(0), mid(0)
+  connect cndt(0), siz(1)
+  basic_shape()
+}
+proc basic_shape() {
+  mid {pt3dclear() pt3dadd(0, 0, 0, 1) pt3dadd(15, 0, 0, 1)}
+  siz {pt3dclear() pt3dadd(15, 0, 0, 1) pt3dadd(135, 0, 0, 1)}
+  trsd {pt3dclear() pt3dadd(0, 0, 0, 1) pt3dadd(-164, 0, 0, 1)}
+  cndt {pt3dclear() pt3dadd(135, 0, 0, 1) pt3dadd(210, 0, 0, 1)}
+}
+
+objref all, has_ms, no_ms
+proc subsets() { local i
+  objref all, has_ms, no_ms
+  all = new SectionList()
+    mid all.append()
+    siz all.append()
+    trsd all.append()
+    cndt all.append()
+
+  has_ms = new SectionList()
+    mid has_ms.append()
+    trsd has_ms.append()
+
+  no_ms = new SectionList()
+    siz no_ms.append()
+
+}
+proc geom() {
+  mid {  L = 6  diam = 0.8  }
+  siz {  L = 6  diam = 0.8  }
+  trsd {  L = 100  diam = 0.8  }
+  cndt {  L = 30  diam = 0.8  }
+}
+proc geom_nseg() {
+   mid { nseg = 5  }
+   siz { nseg = 5  }
+   trsd { nseg = 10  }
+   cndt { nseg = 3  }
+}
+proc biophys() {
+  forsec all {
+    Ra = 123
+    cm = 1
+    insert nakpump
+      Imax_nakpump = 0.25
+      Km_nai_nakpump = 13
+      Km_ko_nakpump = 1.5
+    insert nakpas
+      gbar_nakpas = 0.0001
+      epas_nakpas = -59
+    insert ioni
+      D_ioni = 0.6
+
+  }
+  mid {
+    insert kf_a
+    insert kf_d
+    insert ks
+    insert nav1p6
+      epsilon_nav1p6=1.75
+      zeta_nav1p6=0.6
+      Q10f_nav1p6 = 1.5
+      Q10b_nav1p6 = 1.5
+    insert nav1p7
+    insert nav1p8
+    insert nav1p9
+    
+  }
+  siz {
+    insert kf_a
+    insert kf_d
+    insert ks
+    insert nav1p6
+      epsilon_nav1p6=1.75
+      zeta_nav1p6=0.6
+      Q10f_nav1p6 = 1.5
+      Q10b_nav1p6 = 1.5
+    insert nav1p7
+    insert nav1p8
+    insert nav1p9    
+  }
+
+  trsd {
+    insert ms_v1
+    insert ks
+  }
+  cndt {
+    insert ks
+  }
+
+// *************************** assign conductances ****************************
+siz {
+
+      gbar_nav1p6 = 0.28
+      gbar_nav1p7 = 0.4
+      gbar_nav1p8 = 1
+      gbar_nav1p9 = 0.0004
+
+      gbar_kf_a = 0.09
+      gbar_kf_d = 0.08
+      gbar_ks = 0.038
+  
+  }
+
+trsd {
+
+  gbar_ms_v1 = 0.00018
+      m1_ms_v1 = 13.1
+      m2_ms_v1 = 16900
+      tau_t_ms_v1 = 1000
+      slope_m_ms_v1 = 2.07
+      A_m_ms_v1 = 10
+
+      lamda_ms_v1 = 1
+      dlamda_ms_v1 = 0
+      tension0_ms_v1 = 4.45
+     
+      gbar_ks = 0.004
+  }
+
+mid {
+  gbar_nav1p6(0:1) = 0:siz.gbar_nav1p6(0.5)
+  gbar_nav1p7(0:1) = 0:siz.gbar_nav1p7(0.5)
+  gbar_nav1p8(0:1) = 0:siz.gbar_nav1p8(0.5)
+  gbar_nav1p9(0:1) = 0:siz.gbar_nav1p9(0.5)
+
+ gbar_kf_a(0:1) = 0:siz.gbar_kf_a(0.5)
+ gbar_kf_d(0:1) = 0:siz.gbar_kf_d(0.5)
+ gbar_ks(0:1) = trsd.gbar_ks(0.5):siz.gbar_ks(0.5)
+ }
+
+ cndt {
+    gbar_ks = trsd.gbar_ks(0.5)
+  }
+// *********************************** end assign conductances
+
+}
+access mid
+
+celldef()
+
+
+

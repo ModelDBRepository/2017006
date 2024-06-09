@@ -1,0 +1,165 @@
+// this file defines the afferent geometry
+load_file("nrngui.hoc")
+load_file("afferent_model_NewInit.hoc")
+load_file("afferent_gui_v1.ses")
+
+
+
+
+// *******customize the run procedure to save the data more efficiently
+proc run_save() {local rt, rtstart, ts, v_old, vflag
+// *******modified from continuerun() at "stdrun.hoc"
+	realtime = 0  rt = screen_update_invl  rtstart = startsw()
+	eventcount=0
+	eventslow=1
+	stoprun = 0
+// declar loca variables inserted by bin
+v_old=0
+vflag=1
+t_spk=0
+// end declar
+
+	if (using_cvode_) {
+		cvode.event($1)
+		ts = $1
+		if (cvode.use_local_dt) {
+			cvode.solve(ts)
+			flushPlot()
+			realtime = startsw() - rtstart
+			return
+		}
+	}else{
+		ts = $1 - dt/2
+	}
+	while(t < ts && stoprun == 0) {
+		step()
+if (siz.v>0) {vflag = 0}
+  //***********save section inserted by Bin Feng
+ if (vflag || t>40000){
+	   if (abs(siz.v(0.5) - v_old) > 0.5){
+		v_old=siz.v(0.5)
+		$o2.printf("%g %g ",t/1000,siz.v(0.5))
+		$o2.printf("%g %g ",trsd.nai(0.5),siz.nai(0.5))
+		$o2.printf("%g %g\n",trsd.ki(0.5),siz.ki(0.5))
+		}
+	} else {
+	   if (abs(siz.v(0.5) - v_old) > 3){
+		v_old=siz.v(0.5)
+		$o2.printf("%g %g ",t/1000,siz.v(0.5))
+		$o2.printf("%g %g ",trsd.nai(0.5),siz.nai(0.5))
+		$o2.printf("%g %g\n",trsd.ki(0.5),siz.ki(0.5))
+		}
+	}
+
+// **** record the location of the spikes
+
+	if (abs(t-t_spk)>10 && siz.v>20){
+		t_spk =t
+		$o3.printf("%g\n",t/1000)}
+
+
+  //*******************************end save section
+		realtime = startsw() - rtstart
+		if (realtime >= rt) {
+			screen_update()
+			//really compute for at least screen_update_invl
+			realtime = startsw() - rtstart
+			rt = realtime + screen_update_invl
+		}
+	}
+	if (using_cvode_ && stoprun == 0) { // handle the "tstop" event
+		step() // so all recordings take place at tstop
+	}
+	flushPlot()
+	realtime = startsw() - rtstart
+ //save the last set of datapoints
+	$o2.printf("%g %g ",t/1000,siz.v(0.5))
+	$o2.printf("%g %g ",trsd.nai(0.5),siz.nai(0.5))
+	$o2.printf("%g %g\n",trsd.ki(0.5),siz.ki(0.5))
+}
+
+
+
+
+//*********************************** load ramped stretch data files
+objref f1
+f1 = new File()
+f1.ropen("lamda_vec.dat")
+f1.seek()
+objref lamda_vec, lamda_tvec
+objref dlamda_vec, dlamda_tvec
+lamda_vec = new Vector(22)
+lamda_tvec = new Vector(22)
+dlamda_vec = new Vector(23)
+dlamda_tvec = new Vector(23)
+
+
+for(i = 0;i<22;i+=1) {lamda_tvec.x[i] = f1.scanvar()
+lamda_vec.x[i] = f1.scanvar()}
+f1.close()
+
+f1.ropen("dlamda_vec.dat")
+f1.seek()
+for(i = 0;i<23;i+=1) {dlamda_tvec.x[i] = f1.scanvar()
+dlamda_vec.x[i] = f1.scanvar()}
+f1.close()
+
+
+// the 1 end of trsd is away from siz, 0 end connects to mid
+lamda_vec.play(&trsd.lamda_ms_v1(0.05),lamda_tvec,1)
+lamda_vec.play(&trsd.lamda_ms_v1(0.15),lamda_tvec,1)
+lamda_vec.play(&trsd.lamda_ms_v1(0.25),lamda_tvec,1)
+lamda_vec.play(&trsd.lamda_ms_v1(0.35),lamda_tvec,1)
+lamda_vec.play(&trsd.lamda_ms_v1(0.45),lamda_tvec,1)
+lamda_vec.play(&trsd.lamda_ms_v1(0.55),lamda_tvec,1)
+lamda_vec.play(&trsd.lamda_ms_v1(0.65),lamda_tvec,1)
+lamda_vec.play(&trsd.lamda_ms_v1(0.75),lamda_tvec,1)
+lamda_vec.play(&trsd.lamda_ms_v1(0.85),lamda_tvec,1)
+lamda_vec.play(&trsd.lamda_ms_v1(0.95),lamda_tvec,1)
+dlamda_vec.play(&trsd.dlamda_ms_v1(0.05),dlamda_tvec,1)
+dlamda_vec.play(&trsd.dlamda_ms_v1(0.15),dlamda_tvec,1)
+dlamda_vec.play(&trsd.dlamda_ms_v1(0.25),dlamda_tvec,1)
+dlamda_vec.play(&trsd.dlamda_ms_v1(0.35),dlamda_tvec,1)
+dlamda_vec.play(&trsd.dlamda_ms_v1(0.45),dlamda_tvec,1)
+dlamda_vec.play(&trsd.dlamda_ms_v1(0.55),dlamda_tvec,1)
+dlamda_vec.play(&trsd.dlamda_ms_v1(0.65),dlamda_tvec,1)
+dlamda_vec.play(&trsd.dlamda_ms_v1(0.75),dlamda_tvec,1)
+dlamda_vec.play(&trsd.dlamda_ms_v1(0.85),dlamda_tvec,1)
+dlamda_vec.play(&trsd.dlamda_ms_v1(0.95),dlamda_tvec,1)
+
+//**************setup the run control param*********
+celsius=30
+tstop = lamda_tvec.max()
+v_init = -65
+cvode_active(1)            //variable integration timestep
+cvode.atol(0.00001)         //default is 0.001
+
+//********************* initial conditions for the ion concentrations
+nai0_na_ion = 4
+ki0_k_ion = 155
+nao0_nai_ion = 145
+ko0_k_ion = 6.3
+
+//********* define the file name to store data
+
+//	init()
+//	run()
+
+strdef filename, prefix
+objref savdata,spks
+savdata=new File()
+spks=new File()
+prefix = "Data_spike_waveforms"
+num=0
+sprint(filename, "%s%d.txt", prefix, num)	
+savdata.wopen(filename)
+spks.wopen("Data_spike_location.txt")
+
+
+stdinit()
+run_save(tstop,savdata,spks)
+
+savdata.close()
+spks.close()
+
+//******* end saving data
